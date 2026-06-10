@@ -18,11 +18,9 @@ const sheetSchema = new mongoose.Schema({
     },
     fileName:{
         type:String,
-        required:true,
     },
     fileUrl:{
         type:String,
-        required:true,
     },
     totalQuestions:{
         type:Number,
