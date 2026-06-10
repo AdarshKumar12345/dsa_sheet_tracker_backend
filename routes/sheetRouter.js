@@ -7,22 +7,17 @@ import upload from "../controllers/multerController.js";
 import User from "../models/User.js";
 import Sheet from "../models/Sheet.js";
 
-
 const router = express.Router();
-
 
 router.post("/upload", (req, res) => {
     upload(req, res, async (err) => {
-
         if (err) {
             return res.status(400).json({
                 success: false,
                 message: err.message
             });
         }
-
         await uploadFile(req, res);
-
     });
 });
 
@@ -47,7 +42,6 @@ router.delete('/:id', async (req, res) => {
             });
         }
 
-        // If the sheet has an owner user, check that the request contains the same user
         if (sheet.user) {
             if (!req.user || req.user._id.toString() !== sheet.user.toString()) {
                 return res.status(403).json({
@@ -117,6 +111,7 @@ router.patch('/question/:id/toggle', async (req, res) => {
         });
     }
 });
+
 router.post('/create-user', createUser);
 
 router.post('/find-user', async (req, res) => {
@@ -133,12 +128,12 @@ router.post('/find-user', async (req, res) => {
             success: true,
             data: user,
         });
-    }
-    else {
+    } else {
         return res.status(404).json({
             success: false,
             message: "User not found",
         });
     }
 });
+
 export default router;
