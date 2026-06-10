@@ -12,6 +12,15 @@ async function getSheetById(req, res) {
             });
         }
 
+        if (sheetData.user) {
+            if (!req.user || req.user._id.toString() !== sheetData.user.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You are not authorized to view this sheet"
+                });
+            }
+        }
+
         let questions = sheetData.questions.map(q => q.toObject());
         if (req.user) {
             const solvedSet = new Set(req.user.questionsSolved.map(qid => qid.toString()));
@@ -43,7 +52,13 @@ async function getSheetById(req, res) {
 
 async function getAllSheets(req, res) {
     try {
-        const sheets = await Sheet.find().populate('questions');
+        if (!req.user) {
+            return res.status(200).json({
+                success: true,
+                sheets: []
+            });
+        }
+        const sheets = await Sheet.find({ user: req.user._id }).populate('questions');
 
         return res.status(200).json({
             success: true,

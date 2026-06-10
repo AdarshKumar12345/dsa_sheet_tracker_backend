@@ -6,10 +6,11 @@ import { createUser, findUser } from "../controllers/handleUsers.js";
 import upload from "../controllers/multerController.js";
 import User from "../models/User.js";
 import Sheet from "../models/Sheet.js";
+import { requireAuth } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/upload", (req, res) => {
+router.post("/upload", requireAuth, (req, res) => {
     upload(req, res, async (err) => {
         if (err) {
             return res.status(400).json({
@@ -21,17 +22,17 @@ router.post("/upload", (req, res) => {
     });
 });
 
-router.post('/create-sheet', uploadSheet);
+router.post('/create-sheet', requireAuth, uploadSheet);
 
-router.get('/sheets', async (req, res) => {
+router.get('/sheets', requireAuth, async (req, res) => {
     getAllSheets(req, res);
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', requireAuth, (req, res) => {
     getSheetById(req, res);
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const sheet = await Sheet.findOne({ id });
@@ -72,14 +73,8 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-router.patch('/question/:id/toggle', async (req, res) => {
+router.patch('/question/:id/toggle', requireAuth, async (req, res) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: "Authentication required to toggle completion status"
-            });
-        }
         const { id } = req.params;
         const user = await User.findById(req.user._id);
         if (!user) {
