@@ -15,8 +15,25 @@ async function uploadFile(req, res) {
   const file = req.file;
 
   try {
+    console.log("Starting PDF parsing for file:", file.originalname);
+    
     const pdfData = await pdfParsing(file);
+    console.log("PDF parsed successfully, length:", pdfData.length);
+    
+    if (!pdfData || pdfData.trim().length === 0) {
+      throw new Error("No text content extracted from PDF. Please ensure the PDF contains searchable text.");
+    }
+
+    console.log("Starting Groq parsing...");
     const questions = await pdfGroq_parse(pdfData);
+    
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error("No questions extracted from PDF. Please check your PDF format.");
+    }
+
+    console.log("Questions extracted:", questions.length);
+    console.log("Fetching links for questions...");
+    
     await fetchLinksOfQuestions(questions);
 
     res.status(201).json({
@@ -31,7 +48,7 @@ async function uploadFile(req, res) {
     console.error("UPLOAD ERROR:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to parse document or sheet layout.",
     });
   } finally {
     if (file && file.path && fs.existsSync(file.path)) {

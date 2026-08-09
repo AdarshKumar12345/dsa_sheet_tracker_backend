@@ -2,25 +2,55 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import fs from "fs";
 
 async function pdfParsing(file) {
-  const data = new Uint8Array(fs.readFileSync(file.path));
+  try {
+    if (!file || !file.path) {
+      throw new Error("No file path provided");
+    }
 
-  const pdf = await pdfjsLib.getDocument({
-    data,
-  }).promise;
+    if (!fs.existsSync(file.path)) {
+      throw new Error("File does not exist");
+    }
 
-  let text = "";
+    const data = new Uint8Array(fs.readFileSync(file.path));
 
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
+    if (data.length === 0) {
+      throw new Error("File is empty");
+    }
 
-    const content = await page.getTextContent();
+    const pdf = await pdfjsLib.getDocument({
+      data,
+    }).promise;
 
-    text += content.items.map((item) => item.str).join(" ");
+    if (!pdf || pdf.numPages === 0) {
+      throw new Error("Invalid PDF or PDF has no pages");
+    }
 
-    text += "\n";
+    let text = "";
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      try {
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        
+        if (content && content.items) {
+          text += content.items.map((item) => item.str).join(" ");
+        }
+        text += "\n";
+      } catch (pageError) {
+        console.warn(`Error processing page ${pageNum}:`, pageError);
+        continue; // Skip problematic pages
+      }
+    }
+
+    if (!text || text.trim().length === 0) {
+      throw new Error("No text content extracted from PDF");
+    }
+
+    return text;
+  } catch (error) {
+    console.error("PDF Parsing Error:", error.message);
+    throw new Error(`Failed to parse PDF: ${error.message}`);
   }
-
-  return text;
 }
 
 export default pdfParsing;

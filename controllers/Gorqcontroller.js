@@ -1,6 +1,5 @@
 
 import Groq from "groq-sdk";
-import { DefaultDeserializer } from "v8";
 
 async function pdfGroq_parse(pdfText) {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -43,31 +42,47 @@ PDF Text:
 ${pdfText}
 `;
 
+    try {
+        const responce = await groq.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+                {
+                    role: "user",
+                    content: prompt,
+                },
+            ],
+            temperature: 0,
+            max_tokens: 8000
+        });
 
-    const responce = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-            {
-                role: "user",
-                content: prompt,
+        const result = responce.choices[0].message.content;
 
-            },
-        ],
-        temperature: 0,
-        max_tokens: 8000
-    });
+        // Clean the response more robustly
+        let cleanJson = result
+            .replace(/```json\n?/g, "")
+            .replace(/```\n?/g, "")
+            .trim();
 
-    const result = responce.choices[0].message.content;
+        // Extract JSON array if it's wrapped in text
+        const jsonMatch = cleanJson.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            cleanJson = jsonMatch[0];
+        }
 
-    const cleanJson = result
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+        console.log("Cleaned JSON:", cleanJson);
 
-    console.log(cleanJson);
+        const parsedData = JSON.parse(cleanJson);
+        
+        // Validate that we got an array
+        if (!Array.isArray(parsedData)) {
+            throw new Error("Response is not a valid JSON array");
+        }
 
-    return JSON.parse(cleanJson);
-
+        return parsedData;
+    } catch (error) {
+        console.error("Error parsing PDF with Groq:", error.message);
+        throw new Error(`Failed to parse PDF content: ${error.message}`);
+    }
 }
 
 export default pdfGroq_parse;
